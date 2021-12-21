@@ -1,0 +1,141 @@
+package general;
+
+//import io.cucumber.datatable.internal.difflib.myers.MyersDiff;
+
+import io.cucumber.java.After;
+import io.cucumber.java.Before;
+import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.interactions.Actions;
+
+import java.io.File;
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+
+//import java.net.URL;
+//import java.util.concurrent.TimeUnit;
+//import org.openqa.selenium.PageLoadStrategy;
+
+public final class Setup {
+	private static WebDriver driver;
+	private static final HashMap<String, Object> store = new HashMap<>();
+	private static Actions actions;
+	private static WaitingObject waitingObject;
+	@SuppressWarnings("unused")
+	private static final String defaultURL = "";
+	private static JavascriptExecutor jsExecutor;
+	public static Map<String, Object> timeouts;
+
+	@Before
+	public void InitSetup() {
+		System.setProperty("webdriver.chrome.driver", System.getenv("CHROME_DRIVER"));
+		//String browser = System.getProperty("browser");
+		System.setProperty("webdriver.chrome.silentOutput", "true");
+		ChromeOptions options = new ChromeOptions();
+		timeouts = new HashMap<>();
+		timeouts.put("implicit", 3000);
+		timeouts.put("pageLoad", 50000000);
+		timeouts.put("script", 300000);
+		options.setCapability("timeouts", timeouts);
+		driver = new ChromeDriver(options);
+		driver.manage().window().maximize();
+		initObject();
+	}
+
+	private static void initObject() {
+		waitingObject = new WaitingObject(driver);
+		actions = new Actions(driver);
+		setJsExecutor((JavascriptExecutor) driver);
+		loadDefaultProperties();
+	}
+
+	public static Map<String, Object> getTimeouts() {
+		return timeouts;
+	}
+
+	@SuppressWarnings("unused")
+	void setTimeouts(Map<String, Object> timeouts) {
+		Setup.timeouts = timeouts;
+	}
+
+	public static Object executeScript(String script, Object... arg) {
+		return getJsExecutor().executeScript(script,arg);
+	}
+
+	public static WebDriver getDriver() {
+		return driver;
+	}
+
+	public static Actions getActions() {
+		return actions;
+	}
+
+	/**
+	 *
+	 * @param key
+	 * @return
+	 */
+	public static Object getValueStore(String key) {
+		return store.get(key);
+	}
+
+	/**
+	 *
+	 * @return Return an instance of wait.
+	 */
+	public static WaitingObject getWait() {
+		return waitingObject;
+	}
+
+	/**
+	 *
+	 * @param key
+	 * @param value
+	 */
+	public static void setKeyValueStore(String key, Object value) {
+		store.put(key, value);
+	}
+
+	/**
+	 * Open new url
+	 *
+	 * @param url
+	 */
+	public static void openUrl(String url) {
+		driver.get(url);
+		//waitingObject.waitForLoading(3600);
+	}
+
+	@After
+	public void close() {
+		Setup.getWait().thread(3000);
+		driver.close();
+	}
+
+	private static void loadDefaultProperties() {
+		InputStream input = Setup.class.getResourceAsStream("/defaultproperties.properties");
+
+		Properties pop = new Properties();
+		try {
+			pop.load(input);
+		} catch (java.io.IOException ignored) { }
+		setKeyValueStore("defaultProperties", pop);
+		int number = (int) (Math.random() * 4 + 1);
+		String avatar_name = "/avatar(" + String.valueOf(number) + ").png";
+		System.setProperty("defaultURL", pop.getProperty("default.URL"));
+		setKeyValueStore("avatar", new File(Setup.class.getResource(avatar_name).getFile())
+				.getAbsolutePath());
+	}
+
+	public static JavascriptExecutor getJsExecutor() {
+		return jsExecutor;
+	}
+
+	public static void setJsExecutor(JavascriptExecutor jsExecutor) {
+		Setup.jsExecutor = jsExecutor;
+	}
+}
